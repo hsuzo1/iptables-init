@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 PUB_IF=$(ip a| grep "BROADCAST" | awk -F ":" 'NR==1{print $2}' | sed "s/ //g")
@@ -6,16 +6,26 @@ PUB_IF=$(ip a| grep "BROADCAST" | awk -F ":" 'NR==1{print $2}' | sed "s/ //g")
 # Empty all rules
 sudo iptables -t filter -F
 sudo iptables -t filter -X
+sudo iptables -t filter -Z
 
-# Bloc everything by default but OUTPUT
+sudo iptables -t nat -F
+sudo iptables -t nat -X
+sudo iptables -t nat -Z
+
+# Bloc INPUT
 sudo iptables -t filter -P INPUT DROP
-sudo iptables -t filter -P FORWARD DROP
+sudo iptables -t filter -P FORWARD ACCEPT
 sudo iptables -t filter -P OUTPUT ACCEPT
 
 # Authorize already established connexions
 sudo iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-sudo iptables -t filter -A INPUT -i lo -j ACCEPT
-sudo iptables -t filter -A OUTPUT -o lo -j ACCEPT
+sudo iptables -A INPUT -i lo -j ACCEPT
+sudo iptables -A OUTPUT -o lo -j ACCEPT
+
+sudo iptables -t nat -P PREROUTING ACCEPT
+sudo iptables -t nat -P POSTROUTING ACCEPT
+sudo iptables -t nat -P OUTPUT ACCEPT
+
 
 # Block sync
 # sudo iptables -A INPUT -i ${PUB_IF} -p tcp ! --syn -m state --state NEW -j DROP
@@ -54,5 +64,6 @@ for ip in `cat ips.txt`
 do
 iptables -I INPUT -s $ip -j ACCEPT
 done
+
 
 echo "All Done!"
